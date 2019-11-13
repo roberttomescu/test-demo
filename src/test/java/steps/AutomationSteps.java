@@ -1,15 +1,24 @@
 package steps;
 
+import backpack.TestBackPack;
 import cucumber.api.java.en.And;
 import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
+
+import io.cucumber.java.After;
 import org.junit.Assert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.test.context.ActiveProfiles;
+import pageobjects.ContactSuccess;
+import pageobjects.ContactUsForm;
+import pageobjects.HomePage;
+import testLink.TestLink;
+import testlink.api.java.client.TestLinkAPIClient;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,22 +26,30 @@ import java.util.stream.Collectors;
 /**
  * Created by Marius Dima on 25.07.2019.
  */
+@ActiveProfiles("chrome")
 public class AutomationSteps extends TestRunner {
 
-    public WebDriver driver;
+    @Autowired
+    private WebDriver driver;
+
+    @Autowired
+    private TestBackPack testBackPack;
+
+    @Autowired
+    private TestLink testLink;
+
+    @Value("${browser.url}")
+    private String url;
 
 
     @Given("I setup driver")
     public void iSetupDriver() {
-        System.setProperty("webdriver.chrome.driver", "src/test/resources/driver/chromedriver.exe");
-        ChromeOptions chromeOptions = new ChromeOptions();
-        driver = new ChromeDriver(chromeOptions);
-        driver.manage().window().maximize();
+
     }
 
     @And("I go to {string}")
     public void iGoTo(String url) {
-        driver.get(url);
+        driver.get(this.url);
     }
 
 
@@ -57,4 +74,99 @@ public class AutomationSteps extends TestRunner {
     public void iQuitTheDriver() {
         driver.quit();
     }
+
+    @io.cucumber.java.en.When("I click on 'Contact us'")
+    public void iClickOn() {
+        HomePage homePage = new HomePage(driver);
+        homePage.clickContactUs();
+    }
+
+    @io.cucumber.java.en.And("I select Subject Heading {string}")
+    public void iSelectSubjectHeading(String value) {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.selectSubjectHeading(value);
+    }
+
+    @io.cucumber.java.en.And("I enter email address {string}")
+    public void iEnterEmailAddress(String email) {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.enterEmailAddress(email);
+    }
+
+    @io.cucumber.java.en.And("I enter message {string}")
+    public void iEnterMessage(String text) {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.enterMessage(text);
+        testBackPack.setMessage(text);
+    }
+
+    @io.cucumber.java.en.Then("Success message {string} appears")
+    public void successMessageAppears(String arg0) {
+        ContactSuccess successPage = new ContactSuccess(driver);
+        Assert.assertEquals("Success message", arg0, successPage.getSuccessMessage());
+    }
+
+    @io.cucumber.java.en.Then("Error message appears {string}")
+    public void errorMessageAppears(String arg0) {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        Assert.assertEquals("Error message", arg0, contactPage.getErrorMessage());
+    }
+
+    @io.cucumber.java.en.And("I click 'Send' expecting success")
+    public void iClickSendExpectingSuccess() {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.clickSendSuccess();
+    }
+
+    @io.cucumber.java.en.And("I click 'Send' expecting error")
+    public void iClickSendExpectingError() {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.clickSendError();
+    }
+
+
+    // Contact simple feature
+
+
+    @io.cucumber.java.en.When("I click on 'Contact us' button")
+    public void iClickOnContactUsButton() {
+        HomePage homePage = new HomePage(driver);
+        homePage.clickContactUs();
+    }
+
+    @io.cucumber.java.en.And("I complete the contact details")
+    public void iCompleteTheContactDetails() {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.selectSubjectHeading("Webmaster")
+                .enterEmailAddress("test@email.com")
+                .enterMessage("mesaj de test");
+    }
+
+    @io.cucumber.java.en.Then("I submit contact form")
+    public void iSubmitContactForm() {
+        ContactUsForm contactPage = new ContactUsForm(driver);
+        contactPage.clickSendSuccess();
+        System.out.println("in 'I submit'...");
+        testLink.ping();
+       // testLink.updateTest(TestLink.TEST_CASE_NAME, TestLinkAPIClient.TEST_PASSED);
+    }
+
+    @After
+    public void quit() {
+        System.out.println("in @after...");
+        testLink.ping();
+        testLink.updateTest(TestLink.TEST_CASE_NAME, TestLinkAPIClient.TEST_PASSED);
+        driver.quit();
+    }
+
+    @io.cucumber.java.en.Given("I go to url http:\\/\\/automationpractice.com")
+    public void iGoToUrlHttpAutomationpracticeCom() {
+        driver.get("");
+    }
+
+    @io.cucumber.java.en.Given("I go to url")
+    public void iGoToUrl() {
+        driver.get(url);
+    }
+
 }
